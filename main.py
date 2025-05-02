@@ -41,6 +41,10 @@ def data_preprocess(data):
     # print(data[:5, :])
     # print(data[-5:, :])
 
+    # Normalize the data
+    for i in range(1, 6):
+        data[:, i] = (data[:, i] - np.mean(data[:, i])) / np.std(data[:, i])
+        
     return data
 
 def generate_labels(data, time_period = 24, interval = 1):
