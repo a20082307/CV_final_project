@@ -13,13 +13,13 @@ def data_loader(time_period = 24, interval = 1):
     """
     train_data_csv = pd.read_csv('train.csv')
     train_data_csv['Open Time'] = pd.to_datetime(train_data_csv['Open Time'], unit = 'ms')
-    train_data = train_data_csv[['Open Time', 'Open', 'High', 'Low', 'Close', 'Volume']].copy()
+    train_data = train_data_csv[['Open', 'High', 'Low', 'Close', 'Volume']].copy()
     train_data = data_preprocess(train_data)
     train_dataset, train_labels = generate_labels(train_data, time_period, interval)
 
     test_data_csv = pd.read_csv('test.csv')
     test_data_csv['Open Time'] = pd.to_datetime(test_data_csv['Open Time'], unit = 'ms')
-    test_data = test_data_csv[['Open Time', 'Open', 'High', 'Low', 'Close', 'Volume']].copy()
+    test_data = test_data_csv[['Open', 'High', 'Low', 'Close', 'Volume']].copy()
     test_data = data_preprocess(test_data)
     test_dataset, test_labels = generate_labels(test_data, time_period, interval)
 
@@ -36,13 +36,13 @@ def data_preprocess(data):
     data['Volume'] = data['Volume'].diff()
 
     data.dropna(inplace = True)
-    data = data[['Open Time', 'Open', 'High', 'Low', 'Close', 'Volume']].copy().to_numpy()
+    data = data[['Open', 'High', 'Low', 'Close', 'Volume']].copy().to_numpy()
     # print(data.shape)
     # print(data[:5, :])
     # print(data[-5:, :])
 
     # Normalize the data
-    for i in range(1, 6):
+    for i in range(5):
         data[:, i] = (data[:, i] - np.mean(data[:, i])) / np.std(data[:, i])
         
     return data
@@ -56,8 +56,13 @@ def generate_labels(data, time_period = 24, interval = 1):
     for i in range(len(data) - time_period - interval):
         dataset.append(data[i : i + time_period])
         labels.append(data[i + time_period + interval - 1][4] > data[i + time_period - 1][4])
-    dataset = np.array(dataset)
+    
+    dataset = np.array(dataset).T
+    dataset = dataset.reshape((-1, dataset.shape[-1]))
+    # print(dataset.shape)
+
     labels = np.array(labels)
+    # print(labels.shape)
 
     return dataset, labels
 
