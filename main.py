@@ -9,7 +9,6 @@ def data_loader():
     The data contains the price of bitcoin from 2021 to 2024
     The time period of each K line is 1 hour
     """
-    
     data_csv = pd.read_csv('train.csv')
     data_csv['Open Time'] = pd.to_datetime(data_csv['Open Time'], unit = 'ms')
     data = data_csv[['Open Time', 'Open', 'High', 'Low', 'Close', 'Volume']].copy()
@@ -27,6 +26,10 @@ def data_preprocess(data):
     data['Volume'] = data['Volume'].diff()
 
     data.dropna(inplace = True)
+    data = data[['Open Time', 'Open', 'High', 'Low', 'Close', 'Volume']].copy().to_numpy()
+    # print(data.shape)
+    # print(data[:5, :])
+
     return data
 
 
