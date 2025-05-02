@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-
+import scipy as sp
 
 def data_loader(time_period = 24, interval = 1):
     """
@@ -65,6 +65,26 @@ def generate_labels(data, time_period = 24, interval = 1):
     # print(labels.shape)
 
     return dataset, labels
+
+def PCA(data, dimension):
+    if (dimension <= 0):
+        raise ValueError("Dimension must be greater than 0")
+    
+    if (dimension > data.shape[0]):
+        raise ValueError("Dimension must be less than or equal to the number of features")
+    
+    mean = np.mean(data, axis = 1).reshape(-1, 1)
+    centered_data = data - mean
+    covariance = centered_data @ centered_data.T
+
+    _, eigenvectors = sp.sparse.linalg.eigs(covariance, k = dimension, which = 'LM')
+    eigenvectors = eigenvectors.real
+
+    W = eigenvectors[:, : dimension]
+    Z = W.T @ centered_data
+    # print(Z.shape)
+
+    return Z
 
 
 if __name__ == "__main__":
