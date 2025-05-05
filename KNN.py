@@ -6,13 +6,26 @@ class KNearestNeighbors:
 
     Attributes:
         k (int, default=5): Number of nearest neighbors to consider.
+        X_train (array-like): The training data.
+        y_train (array-like): The class labels for the training data.
     """
 
     def __init__(self, k=5):
+        """Initialize the KNN classifier with the number of neighbors.
+
+        Args:
+            k (int, optional, default=5): Number of nearest neighbors to consider.
+        """
         self.k = k
 
     def fit(self, X, y):
-        """Fit the KNN classifier to the training data. (lazy learning)"""
+        """Fit the KNN classifier to the training data.
+
+        Args:
+            X (array-like): The training data.
+            y (array-like): The class labels for the training data.
+        """
+        # lazy learning
         self.X_train = X
         self.y_train = y
 
