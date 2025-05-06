@@ -13,21 +13,23 @@ def data_loader(time_period = 24, interval = 1):
     """
     train_data_csv = pd.read_csv('train.csv')
     train_data_csv['Open Time'] = pd.to_datetime(train_data_csv['Open Time'], unit = 'ms')
-    train_data = train_data_csv[['Open', 'High', 'Low', 'Close', 'Volume']].copy()
-    train_data = data_preprocess(train_data)
+    tem_train_data = train_data_csv[['Open', 'High', 'Low', 'Close', 'Volume']].copy()
+    train_data = data_preprocess(tem_train_data, tem_train_data)
     train_dataset, train_labels = generate_labels(train_data, time_period, interval)
 
     test_data_csv = pd.read_csv('test.csv')
     test_data_csv['Open Time'] = pd.to_datetime(test_data_csv['Open Time'], unit = 'ms')
-    test_data = test_data_csv[['Open', 'High', 'Low', 'Close', 'Volume']].copy()
-    test_data = data_preprocess(test_data)
+    tem_test_data = test_data_csv[['Open', 'High', 'Low', 'Close', 'Volume']].copy()
+    test_data = data_preprocess(tem_test_data, tem_train_data)
     test_dataset, test_labels = generate_labels(test_data, time_period, interval)
 
     return train_dataset, train_labels, test_dataset, test_labels
 
-def data_preprocess(data):
+def data_preprocess(data, train_data):
     """
     Calculate the difference between price[t] and price[t-1] for all features including volume
+    Notice that we also need to pass train data into this function
+    Since when normalizing the data, we need to use the mean and std of the train data to normalize the target data
     """
     data['Open'] = data['Open'].diff()
     data['High'] = data['High'].diff()
@@ -41,9 +43,18 @@ def data_preprocess(data):
     # print(data[:5, :])
     # print(data[-5:, :])
 
+    train_data['Open'] = train_data['Open'].diff()
+    train_data['High'] = train_data['High'].diff()
+    train_data['Low'] = train_data['Low'].diff()
+    train_data['Close'] = train_data['Close'].diff()
+    train_data['Volume'] = train_data['Volume'].diff()
+
+    train_data.dropna(inplace = True)
+    train_data = train_data[['Open', 'High', 'Low', 'Close', 'Volume']].copy().to_numpy()
+
     # Normalize the data
     for i in range(5):
-        data[:, i] = (data[:, i] - np.mean(data[:, i])) / np.std(data[:, i])
+        data[:, i] = (data[:, i] - np.mean(train_data[:, i])) / np.std(train_data[:, i])
         
     return data
 
