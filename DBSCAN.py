@@ -80,8 +80,8 @@ class DBSCAN:
         self.clusters = [all_clusters[i] for i in valid_cluster]
 
         # print(f'There are {valid_cluster.shape[0]} clusters and {len(self.noise)} noise points')
-        # for i in range(len(self.clusters)):
-        #     print(f'Cluster {i + 1} has {len(self.clusters[i])} elements')
+        # for i, cluster in enumerate(valid_cluster):
+        #     print(f'Cluster {i + 1} has {len(all_clusters[cluster])} elements')
 
         for index in valid_cluster:
             cluster = all_clusters[index]
@@ -95,26 +95,67 @@ class DBSCAN:
             else:
                 self.cluster_meaning.append(('Not Sure', 0.5))
 
-        print(self.cluster_meaning)
+        # for i in range(len(self.cluster_meaning)):
+        #     print(f'Cluster {i + 1} will predict [{self.cluster_meaning[i][0]}] with confidence [{self.cluster_meaning[i][1]}]')
 
     def predict(self, data):
-        raise NotImplementedError
+        if data.shape[0] != self.data.shape[0]:
+            print()
+            raise ValueError(f'The dimension of input data isn\'t equal to the train data. The dimension of input data is [{data.shape[0]}] and the dimension of train data is [{self.data.shape[0]}]\n')
+
+        diff = data.reshape(-1 ,1) - self.data
+        dist = np.linalg.norm(diff, axis = 0)
+        closet_point = np.argsort(dist, kind = 'stable')
+        sorted_dist = dist[closet_point]
+
+        candidate = 0
+        while sorted_dist[candidate] < self.eps:
+            if closet_point[candidate] not in self.noise:
+                for i, cluster in self.clusters:
+                    if closet_point[0] in cluster:
+                        return self.cluster_meaning[i]
+            candidate += 1
+
+        # [TODO]: eps內沒有任何train data
+        if candidate == 0:  
+            raise NotImplementedError
+        
+        # [TODO]: eps內全都是noise
+        else:               
+            raise NotImplementedError
 
 
 if __name__ == '__main__':
-    train_data, train_label, _, _ = data_loader(24, 2)
+    train_data, train_label, test_data, test_label = data_loader(24, 2)
     # print(np.sum(train_label == 1), np.sum(train_label == 0), len(train_label))
 
     model = DBSCAN(train_data, train_label, 0.05, 20, 2)
     model.fit()
 
+    test_data = PCA(test_data, 2)
+    for i in range(50):
+        print(model.predict(test_data[:, i]))
+
+
+
+
+
+
+# test code:
+    ### To see if class DBSCAN behaves like sklearn.cluster.DBSCAN ###
     # train_data = PCA(train_data, 2).T
     # print(train_data.shape)
     # db = sklearn.cluster.DBSCAN(eps = 0.05, min_samples = 20, metric='euclidean')
     # clusters = db.fit_predict(train_data)
-
     # cluster_num = len(np.unique(clusters[clusters != -1]))
     # print(f"Number of clusters: {cluster_num}")
     # print(f"Number of noise points: {np.sum(clusters == -1)}")
     # for i in range(cluster_num):
     #     print(len(clusters[clusters == i]))
+    ### ============================== ###
+
+    ### To see if predict() can handle the input data with different dimension to the train data ###
+    # wrong_data = np.array([1, 2, 3, 4, 5])
+    # model.predict(wrong_data)
+    ### ============================== ###
+    
