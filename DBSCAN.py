@@ -111,18 +111,34 @@ class DBSCAN:
         candidate = 0
         while sorted_dist[candidate] < self.eps:
             if closet_point[candidate] not in self.noise:
-                for i, cluster in self.clusters:
-                    if closet_point[0] in cluster:
+                for i, cluster in enumerate(self.clusters):
+                    if closet_point[candidate] in cluster:
                         return self.cluster_meaning[i]
             candidate += 1
 
-        # [TODO]: eps內沒有任何train data
         if candidate == 0:  
-            raise NotImplementedError
+            centroids = np.array([np.mean(self.data[:, np.array(list(cluster))], axis = 1) for cluster in self.clusters]).T
+            dc_diff = data.reshape(-1, 1) - centroids
+            dc_dist = np.linalg.norm(dc_diff, axis = 0)
+
+            return self.cluster_meaning[np.argmin(dc_dist)]
         
-        # [TODO]: eps內全都是noise
-        else:               
-            raise NotImplementedError
+        else:
+            rise_score = 0
+            fall_score = 0
+            for i, point in enumerate(closet_point):
+                if self.label[point]:
+                    rise_score += np.exp(-sorted_dist[i] / (2 * (self.eps / 2) ** 2))
+                else:
+                    fall_score += np.exp(-sorted_dist[i] / (2 * (self.eps / 2) ** 2))
+
+            rise_prob = rise_score / (rise_score + fall_score)
+            if rise_prob > 0.5:
+                return ('Rise', rise_prob)
+            elif rise_prob < 0.5:
+                return ('Fall', 1 - rise_prob)
+            else:
+                return ('Not Sure', 0.5)
 
 
 if __name__ == '__main__':
@@ -133,8 +149,11 @@ if __name__ == '__main__':
     model.fit()
 
     test_data = PCA(test_data, 2)
-    for i in range(50):
-        print(model.predict(test_data[:, i]))
+    for data in test_data.T:
+        rlt = model.predict(data)
+        if rlt == -1:
+            break
+        
 
 
 
