@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import scipy as sp
 
-def data_loader(time_period = 24, interval = 1):
+def data_loader(which = 1, time_period = 24, interval = 1):
     """
     Load the data from the CSV file
     The data contains the price of bitcoin from 2021 to 2024
@@ -11,13 +11,21 @@ def data_loader(time_period = 24, interval = 1):
     Each data contains "time_period" K lines
     We want to predict the direction of the close price in the next "interval" K lines
     """
-    train_data_csv = pd.read_csv('train.csv')
+    data_path = {
+        1: ['train.csv', 'test.csv'],
+        2: ['train_15min.csv', 'test_15min.csv']
+    }
+
+    if which != 1 and which != 2:
+        raise ValueError(f'No such kind of data, We only have [2] kinds of data, but you require [{which}]th kind of data')
+
+    train_data_csv = pd.read_csv(data_path[which][0])
     train_data_csv['Open Time'] = pd.to_datetime(train_data_csv['Open Time'], unit = 'ms')
     tem_train_data = train_data_csv[['Open', 'High', 'Low', 'Close', 'Volume']].copy()
     train_data = data_preprocess(tem_train_data, tem_train_data)
     train_dataset, train_labels = generate_labels(train_data, time_period, interval)
 
-    test_data_csv = pd.read_csv('test.csv')
+    test_data_csv = pd.read_csv(data_path[which][1])
     test_data_csv['Open Time'] = pd.to_datetime(test_data_csv['Open Time'], unit = 'ms')
     tem_test_data = test_data_csv[['Open', 'High', 'Low', 'Close', 'Volume']].copy()
     test_data = data_preprocess(tem_test_data, tem_train_data)
@@ -99,4 +107,18 @@ def PCA(data, dimension):
 
 
 if __name__ == "__main__":
-    train_data, train_labels, test_data, test_labels = data_loader()
+    train_data, train_labels, test_data, test_labels = data_loader(which = 1)
+    print(f'========== First kind of data ==========')
+    print(train_data[:5, :3])
+    print(train_data[:5, :3])
+    print(test_data[:5, :3])
+    print(test_data[:5, :3])
+    print()
+    
+
+    train_data, train_labels, test_data, test_labels = data_loader(which = 2)
+    print(f'========== Second kind of data ==========')
+    print(train_data[:5, :3])
+    print(train_data[:5, :3])
+    print(test_data[:5, :3])
+    print(test_data[:5, :3])
