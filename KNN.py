@@ -1,5 +1,7 @@
 import numpy as np
-from main import data_loader, PCA
+from sklearn.neighbors import KNeighborsClassifier
+
+from main import PCA, data_loader
 
 
 class KNearestNeighbors:
@@ -65,17 +67,19 @@ class KNearestNeighbors:
         Returns:
             int: The predicted class label for the input data.
         """
-        distances = [np.linalg.norm(x - x_train) for x_train in self.X_train] # FIXME ValueError: operands could not be broadcast together with shapes (2893,) (35024,)
-        
+        distances = np.linalg.norm(self.X_train - x, axis=1)
         k_indices = np.argsort(distances)[: self.k]
         k_nearest_labels = [self.y_train[i] for i in k_indices]
         most_common = np.bincount(k_nearest_labels).argmax()
         return most_common
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     train_data, train_label, test_data, test_label = data_loader()
 
     model = KNearestNeighbors()
-    model.fit(train_data, train_label)
-    print(model.score(test_data, test_label))
+    model.fit(train_data.T, train_label)
+    print(model.score(test_data.T, test_label))
+    # sklearn_model = KNeighborsClassifier(n_neighbors=5)
+    # sklearn_model.fit(train_data.T, train_label)
+    # print(sklearn_model.score(test_data.T, test_label))
