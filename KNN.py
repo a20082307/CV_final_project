@@ -76,10 +76,19 @@ class KNearestNeighbors:
 
 if __name__ == "__main__":
     train_data, train_label, test_data, test_label = data_loader()
+    train_data = PCA(train_data, 9).T
+    test_data = PCA(test_data, 9).T
 
     model = KNearestNeighbors()
-    model.fit(train_data.T, train_label)
-    print(model.score(test_data.T, test_label))
+    model.fit(train_data, train_label)
+    print(model.score(test_data, test_label))
+
     # sklearn_model = KNeighborsClassifier(n_neighbors=5)
-    # sklearn_model.fit(train_data.T, train_label)
-    # print(sklearn_model.score(test_data.T, test_label))
+    # scores = []
+    # for i in range(train_data.shape[0]):
+    #     sklearn_model.fit(PCA(train_data, i + 1).T, train_label)
+    #     score = sklearn_model.score(PCA(test_data, i + 1).T, test_label)
+    #     print(f"Score with {i + 1} dimensions: {score}")
+    #     scores.append((score, i + 1))
+
+    # print(max(scores))
