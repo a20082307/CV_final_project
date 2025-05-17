@@ -2,9 +2,9 @@ import random
 
 import numpy as np
 import scipy as sp
-import sklearn
-import sklearn.cluster
-import sklearn.decomposition
+# import sklearn
+# import sklearn.cluster
+# import sklearn.decomposition
 import tqdm
 
 from main import data_loader, PCA
@@ -142,22 +142,38 @@ class DBSCAN:
 
 
 if __name__ == '__main__':
-    train_data, train_label, test_data, test_label = data_loader(24, 2)
+    train_data, train_label, test_data, test_label = data_loader(1, 24, 2)
     # print(np.sum(train_label == 1), np.sum(train_label == 0), len(train_label))
 
     model = DBSCAN(train_data, train_label, 0.05, 20, 2)
     model.fit()
 
     test_data = PCA(test_data, 2)
-    for data in test_data.T:
+    confusion_matrix = np.array([[0, 0], [0, 0]])
+    unknown = 0
+    
+    for i, data in enumerate(tqdm.tqdm(test_data.T, desc = '[Predicting]')):
         rlt = model.predict(data)
-        if rlt == -1:
-            break
-        
+        confusion = ((rlt[0], bool(test_label[i])))
 
+        match confusion:
+            case ('Rise', True):
+                confusion_matrix[0, 0] += 1
+            case ('Rise', False):
+                confusion_matrix[1, 0] += 1
+            case ('Fall', True):
+                confusion_matrix[0, 1] += 1
+            case ('Fall', False):
+                confusion_matrix[1, 1] += 1
+            case _:
+                unknown += 1
 
-
-
+    accuracy = np.trace(confusion_matrix) / test_label.shape[0]
+    precision = confusion_matrix[0, 0] / np.sum(confusion_matrix[:, 0])
+    recall = confusion_matrix[0, 0] / np.sum(confusion_matrix[0, :])
+    f1_score = 2 * precision * recall / (precision + recall)
+    print(f'F1 score: {f1_score}\nAccuracy: {accuracy}')
+    print(f'Data with No trend have {unknown}, they take about {(unknown / test_label.shape[0] * 100):.2f}%')
 
 
 # test code:
