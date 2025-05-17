@@ -103,7 +103,7 @@ def PCA(data, dimension):
     Z = W.T @ centered_data
     # print(Z.shape)
 
-    return Z
+    return Z, mean, W
 
 
 if __name__ == "__main__":
