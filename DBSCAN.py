@@ -13,7 +13,7 @@ from main import data_loader, PCA
 class DBSCAN:
     def __init__(self, data, label, eps, min_points, dimension):
         if dimension > 0:
-            self.data = PCA(data, dimension)
+            self.data, self.train_mean, self.W = PCA(data, dimension)
         else:
             self.data = data
 
@@ -98,7 +98,37 @@ class DBSCAN:
         # for i in range(len(self.cluster_meaning)):
         #     print(f'Cluster {i + 1} will predict [{self.cluster_meaning[i][0]}] with confidence [{self.cluster_meaning[i][1]}]')
 
-    def predict(self, data):
+    def predict(self, dataset, label):
+        dataset -= self.train_mean
+        dataset = self.W.T @ dataset
+
+        confusion_matrix = np.array([[0, 0], [0, 0]])
+        unknown = 0
+        
+        for i, data in enumerate(tqdm.tqdm(dataset.T, desc = '[Predicting]')):
+            rlt = model.predict_single_point(data)
+            confusion = ((rlt[0], bool(label[i])))
+
+            match confusion:
+                case ('Rise', True):
+                    confusion_matrix[0, 0] += 1
+                case ('Rise', False):
+                    confusion_matrix[1, 0] += 1
+                case ('Fall', True):
+                    confusion_matrix[0, 1] += 1
+                case ('Fall', False):
+                    confusion_matrix[1, 1] += 1
+                case _:
+                    unknown += 1
+
+        accuracy = np.trace(confusion_matrix) / label.shape[0]
+        precision = confusion_matrix[0, 0] / np.sum(confusion_matrix[:, 0])
+        recall = confusion_matrix[0, 0] / np.sum(confusion_matrix[0, :])
+        f1_score = 2 * precision * recall / (precision + recall)
+        print(f'F1 score: {f1_score}\nAccuracy: {accuracy}')
+        print(f'Data with No trend have {unknown}, they take about {(unknown / label.shape[0] * 100):.2f}%')
+        
+    def predict_single_point(self, data):
         if data.shape[0] != self.data.shape[0]:
             print()
             raise ValueError(f'The dimension of input data isn\'t equal to the train data. The dimension of input data is [{data.shape[0]}] and the dimension of train data is [{self.data.shape[0]}]\n')
@@ -147,33 +177,7 @@ if __name__ == '__main__':
 
     model = DBSCAN(train_data, train_label, 0.05, 20, 2)
     model.fit()
-
-    test_data = PCA(test_data, 2)
-    confusion_matrix = np.array([[0, 0], [0, 0]])
-    unknown = 0
-    
-    for i, data in enumerate(tqdm.tqdm(test_data.T, desc = '[Predicting]')):
-        rlt = model.predict(data)
-        confusion = ((rlt[0], bool(test_label[i])))
-
-        match confusion:
-            case ('Rise', True):
-                confusion_matrix[0, 0] += 1
-            case ('Rise', False):
-                confusion_matrix[1, 0] += 1
-            case ('Fall', True):
-                confusion_matrix[0, 1] += 1
-            case ('Fall', False):
-                confusion_matrix[1, 1] += 1
-            case _:
-                unknown += 1
-
-    accuracy = np.trace(confusion_matrix) / test_label.shape[0]
-    precision = confusion_matrix[0, 0] / np.sum(confusion_matrix[:, 0])
-    recall = confusion_matrix[0, 0] / np.sum(confusion_matrix[0, :])
-    f1_score = 2 * precision * recall / (precision + recall)
-    print(f'F1 score: {f1_score}\nAccuracy: {accuracy}')
-    print(f'Data with No trend have {unknown}, they take about {(unknown / test_label.shape[0] * 100):.2f}%')
+    model.predict(test_data, test_label)
 
 
 # test code:
