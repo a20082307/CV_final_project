@@ -78,8 +78,9 @@ if __name__ == "__main__":
     train_data, train_label, test_data, test_label = data_loader()
 
     # TODO: Test the best dimension for PCA. Use the test code below to check if the processed data remains the same.
-    train_data = PCA(train_data, 9).T
-    test_data = PCA(test_data, 9).T
+    train_data, mean, W = PCA(train_data, 9)
+    train_data = train_data.T
+    test_data = (W.T @ (test_data - mean)).T
 
     model = KNearestNeighbors()
     model.fit(train_data, train_label)
