@@ -76,6 +76,8 @@ class KNearestNeighbors:
 
 if __name__ == "__main__":
     train_data, train_label, test_data, test_label = data_loader()
+
+    # TODO: Test the best dimension for PCA. Use the test code below to check if the processed data remains the same.
     train_data = PCA(train_data, 9).T
     test_data = PCA(test_data, 9).T
 
@@ -83,12 +85,26 @@ if __name__ == "__main__":
     model.fit(train_data, train_label)
     print(model.score(test_data, test_label))
 
+    # test code:
+    ### To see if class KNN behaves like sklearn.neighbors.KNeighborsClassifier ###
     # sklearn_model = KNeighborsClassifier(n_neighbors=5)
+    # sklearn_model.fit(train_data, train_label)
+    # print(sklearn_model.score(test_data, test_label))
+    ### ============================== ###
+
+    ### To see which dimension is the best ###
     # scores = []
-    # for i in range(train_data.shape[0]):
+    # for i in range(20):
     #     sklearn_model.fit(PCA(train_data, i + 1).T, train_label)
     #     score = sklearn_model.score(PCA(test_data, i + 1).T, test_label)
     #     print(f"Score with {i + 1} dimensions: {score}")
     #     scores.append((score, i + 1))
 
     # print(max(scores))
+    ### ============================== ###
+
+    ### To see if PCA returns the same result every single time ###
+    # A = PCA(train_data, 9).T
+    # B = PCA(train_data, 9).T
+    # print(np.allclose(A, B))
+    ### ============================== ###
