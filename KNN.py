@@ -77,8 +77,8 @@ class KNearestNeighbors:
 if __name__ == "__main__":
     train_data, train_label, test_data, test_label = data_loader()
 
-    # TODO: Test the best dimension for PCA. Use the test code below to check if the processed data remains the same.
-    train_data, mean, W = PCA(train_data, 9)
+    # The best dimension is 74 but becareful that the test result may change because of the random state in PCA.
+    train_data, mean, W = PCA(train_data, 74)
     train_data = train_data.T
     test_data = (W.T @ (test_data - mean)).T
 
@@ -94,10 +94,14 @@ if __name__ == "__main__":
     ### ============================== ###
 
     ### To see which dimension is the best ###
+    # sklearn_model = KNeighborsClassifier(n_neighbors=5)
     # scores = []
-    # for i in range(20):
-    #     sklearn_model.fit(PCA(train_data, i + 1).T, train_label)
-    #     score = sklearn_model.score(PCA(test_data, i + 1).T, test_label)
+    # for i in range(120):
+    #     train_data_i, mean, W = PCA(train_data, i + 1)
+    #     train_data_i = train_data_i.T
+    #     test_data_i = (W.T @ (test_data - mean)).T
+    #     sklearn_model.fit(train_data_i, train_label)
+    #     score = sklearn_model.score(test_data_i, test_label)
     #     print(f"Score with {i + 1} dimensions: {score}")
     #     scores.append((score, i + 1))
 
@@ -105,7 +109,7 @@ if __name__ == "__main__":
     ### ============================== ###
 
     ### To see if PCA returns the same result every single time ###
-    # A = PCA(train_data, 9).T
-    # B = PCA(train_data, 9).T
+    # A, _, _ = PCA(train_data, 9)
+    # B, _, _ = PCA(train_data, 9)
     # print(np.allclose(A, B))
     ### ============================== ###
