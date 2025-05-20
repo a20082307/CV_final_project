@@ -184,7 +184,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--new')
 args = parser.parse_args()
 
-def predict(clusters, train_data, train_label, data):
+def predict(clusters, train_data, train_label, test_data):
     cluster_num = len(np.unique(clusters[clusters != -1]))
 
     cluster_meaning = []
