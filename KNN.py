@@ -1,115 +1,54 @@
-import numpy as np
+from datetime import datetime
+
+import matplotlib.pyplot as plt
+from sklearn.decomposition import PCA
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 from sklearn.neighbors import KNeighborsClassifier
 
-from main import PCA, data_loader
-
-
-class KNearestNeighbors:
-    """A simple implementation of the K-Nearest Neighbors (KNN) classifier.
-
-    Attributes:
-        k (int, default=5): Number of nearest neighbors to consider.
-        X_train (array-like): The training data.
-        y_train (array-like): The class labels for the training data.
-    """
-
-    def __init__(self, k=5):
-        """Initialize the KNN classifier with the number of neighbors.
-
-        Args:
-            k (int, optional, default=5): Number of nearest neighbors to consider.
-        """
-        self.k = k
-
-    def fit(self, X, y):
-        """Fit the KNN classifier to the training data.
-
-        Args:
-            X (array-like): The training data.
-            y (array-like): The class labels for the training data.
-        """
-        # lazy learning
-        self.X_train = X
-        self.y_train = y
-
-    def predict(self, X):
-        """Predict the class labels for the provided data.
-
-        Args:
-            X (array-like): The input data to predict.
-
-        Returns:
-            ndarray: Predicted class labels for each sample in X.
-        """
-        predictions = [self._predict(x) for x in X]
-        return np.array(predictions)
-
-    def score(self, X, y):
-        """Compute the accuracy of the classifier on the provided data.
-
-        Args:
-            X (array-like): The input data to score.
-            y (array-like): True class labels for the input data.
-
-        Returns:
-            float: The accuracy of the classifier on the provided data.
-        """
-        predictions = self.predict(X)
-        accuracy = np.mean(predictions == y)
-        return accuracy
-
-    def _predict(self, x):
-        """Predict the class label for a single sample.
-
-        Args:
-            x (array-like): The input data to predict.
-
-        Returns:
-            int: The predicted class label for the input data.
-        """
-        distances = np.linalg.norm(self.X_train - x, axis=1)
-        k_indices = np.argsort(distances)[: self.k]
-        k_nearest_labels = [self.y_train[i] for i in k_indices]
-        most_common = np.bincount(k_nearest_labels).argmax()
-        return most_common
-
+from main import data_loader
 
 if __name__ == "__main__":
     train_data, train_label, test_data, test_label = data_loader()
-
-    # The best dimension is 74 but becareful that the test result may change because of the random state in PCA.
-    train_data, mean, W = PCA(train_data, 74)
     train_data = train_data.T
-    test_data = (W.T @ (test_data - mean)).T
+    test_data = test_data.T
 
-    model = KNearestNeighbors()
-    model.fit(train_data, train_label)
-    print(model.score(test_data, test_label))
+    # Fit PCA on training data (samples as rows, features as columns)
+    pca = PCA(n_components=9)
+    pca.fit(train_data)  # train_data shape: (n_samples, n_features)
 
-    # test code:
-    ### To see if class KNN behaves like sklearn.neighbors.KNeighborsClassifier ###
-    # sklearn_model = KNeighborsClassifier(n_neighbors=5)
-    # sklearn_model.fit(train_data, train_label)
-    # print(sklearn_model.score(test_data, test_label))
-    ### ============================== ###
+    # Transform both train and test data using the same PCA object
+    train_data_pca = pca.transform(train_data)  # shape: (n_samples, 9)
+    test_data_pca = pca.transform(test_data)  # shape: (n_samples, 9)
 
-    ### To see which dimension is the best ###
-    # sklearn_model = KNeighborsClassifier(n_neighbors=5)
-    # scores = []
-    # for i in range(120):
-    #     train_data_i, mean, W = PCA(train_data, i + 1)
-    #     train_data_i = train_data_i.T
-    #     test_data_i = (W.T @ (test_data - mean)).T
-    #     sklearn_model.fit(train_data_i, train_label)
-    #     score = sklearn_model.score(test_data_i, test_label)
-    #     print(f"Score with {i + 1} dimensions: {score}")
-    #     scores.append((score, i + 1))
+    knn = KNeighborsClassifier(n_neighbors=5)
 
-    # print(max(scores))
-    ### ============================== ###
+    # Step 5: 訓練模型
+    knn.fit(train_data_pca, train_label)
 
-    ### To see if PCA returns the same result every single time ###
-    # A, _, _ = PCA(train_data, 9)
-    # B, _, _ = PCA(train_data, 9)
-    # print(np.allclose(A, B))
-    ### ============================== ###
+    # Step 6: 預測
+    y_pred = knn.predict(test_data_pca)
+
+    # Step 7: 評估模型表現
+    print("準確率 (Accuracy):", accuracy_score(test_label, y_pred))
+    print("\n分類報告 (Classification Report):\n", classification_report(test_label, y_pred))
+    print("\n混淆矩陣 (Confusion Matrix):\n", confusion_matrix(test_label, y_pred))
+
+    # Step 8: 可視化結果（準確率 vs 鄰居數）
+    accuracy_list = []
+    k_values = range(1, 21, 2)  # 測試從 1 到 20 個鄰居數
+
+    for k in k_values:
+        knn = KNeighborsClassifier(n_neighbors=k)
+        knn.fit(train_data_pca, train_label)
+        y_pred = knn.predict(test_data_pca)
+        accuracy_list.append(accuracy_score(test_label, y_pred))
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(k_values, accuracy_list, marker="o")
+    plt.title("K Values vs Model Accuracy")
+    plt.xlabel("K Values")
+    plt.ylabel("Accuracy")
+    plt.xticks(k_values)
+    plt.grid()
+    plt.savefig(f"fig/KvsModelAcc_{datetime.now().strftime("%m%d_%H%M%S")}.png", dpi=300, bbox_inches="tight")
+    plt.show()
