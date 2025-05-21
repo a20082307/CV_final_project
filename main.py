@@ -13,27 +13,29 @@ def data_loader(which = 1, time_period = 24, interval = 1):
     """
     data_path = {
         1: ['train.csv', 'test.csv'],
-        2: ['train_15min.csv', 'test_15min.csv']
+        2: ['train.csv', 'test.csv'],
+        3: ['train_15min.csv', 'test_15min.csv'],
+        4: ['train_15min.csv', 'test_15min.csv']
     }
 
-    if which != 1 and which != 2:
-        raise ValueError(f'No such kind of data, We only have [2] kinds of data, but you require [{which}]th kind of data')
+    if which > 4 or which < 1:
+        raise ValueError(f'No such kind of data, We only have [{len(data_path)}] kinds of data, but you require [{which}]th kind of data')
 
     train_data_csv = pd.read_csv(data_path[which][0])
     train_data_csv['Open Time'] = pd.to_datetime(train_data_csv['Open Time'], unit = 'ms')
     tem_train_data = train_data_csv[['Open', 'High', 'Low', 'Close', 'Volume']].copy()
-    train_data = data_preprocess(tem_train_data, tem_train_data)
+    train_data = data_preprocess(tem_train_data, tem_train_data, which % 2 == 0)
     train_dataset, train_labels = generate_labels(train_data, time_period, interval)
 
     test_data_csv = pd.read_csv(data_path[which][1])
     test_data_csv['Open Time'] = pd.to_datetime(test_data_csv['Open Time'], unit = 'ms')
     tem_test_data = test_data_csv[['Open', 'High', 'Low', 'Close', 'Volume']].copy()
-    test_data = data_preprocess(tem_test_data, tem_train_data)
+    test_data = data_preprocess(tem_test_data, tem_train_data, which % 2 == 0)
     test_dataset, test_labels = generate_labels(test_data, time_period, interval)
 
     return train_dataset, train_labels, test_dataset, test_labels
 
-def data_preprocess(data, train_data):
+def data_preprocess(data, train_data, cal_difference):
     """
     Calculate the difference between price[t] and price[t-1] for all features including volume
     Notice that we also need to pass train data into this function
@@ -51,11 +53,12 @@ def data_preprocess(data, train_data):
     # print(data[:5, :])
     # print(data[-5:, :])
 
-    train_data['Open'] = train_data['Open'].diff()
-    train_data['High'] = train_data['High'].diff()
-    train_data['Low'] = train_data['Low'].diff()
-    train_data['Close'] = train_data['Close'].diff()
-    train_data['Volume'] = train_data['Volume'].diff()
+    if cal_difference:
+        train_data['Open'] = train_data['Open'].diff()
+        train_data['High'] = train_data['High'].diff()
+        train_data['Low'] = train_data['Low'].diff()
+        train_data['Close'] = train_data['Close'].diff()
+        train_data['Volume'] = train_data['Volume'].diff()
 
     train_data.dropna(inplace = True)
     train_data = train_data[['Open', 'High', 'Low', 'Close', 'Volume']].copy().to_numpy()
