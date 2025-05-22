@@ -12,13 +12,15 @@ def data_loader(which = 1, time_period = 24, interval = 1):
     We want to predict the direction of the close price in the next "interval" K lines
     """
     data_path = {
-        1: ['train.csv', 'test.csv'],
-        2: ['train.csv', 'test.csv'],
-        3: ['train_15min.csv', 'test_15min.csv'],
-        4: ['train_15min.csv', 'test_15min.csv']
+        1: ['train_15min.csv', 'test_15min.csv'],
+        2: ['train_15min.csv', 'test_15min.csv'],
+        3: ['train.csv', 'test.csv'],
+        4: ['train.csv', 'test.csv'],
+        5: ['train_4hr.csv', 'test_4hr.csv'],
+        6: ['train_4hr.csv', 'test_4hr.csv']
     }
 
-    if which > 4 or which < 1:
+    if which > len(data_path) or which < 1:
         raise ValueError(f'No such kind of data, We only have [{len(data_path)}] kinds of data, but you require [{which}]th kind of data')
 
     train_data_csv = pd.read_csv(data_path[which][0])
