@@ -1,16 +1,15 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from cuml import UMAP
-from cuml.cluster import KMeans
-from sklearn.metrics import silhouette_score
+from cuml import UMAP, KMeans
+from cuml.metrics.cluster.silhouette_score import cython_silhouette_score
 
 from main import data_loader
 
 DIM = 2  # Set the dimension for UMAP
-CLUSTER_NUM = 5  # Set the number of clusters for KMeans
+CLUSTER_NUM = 25  # Set the number of clusters for KMeans
 
 
-def find_optimal_dimension_and_clusters(data, max_dim=20, max_clusters=20):
+def find_optimal_dimension_and_clusters(data, max_dim=100, max_clusters=100):
     dim_range = range(2, max_dim + 1)
     cluster_range = range(2, max_clusters + 1)
     scores = np.zeros((len(dim_range), len(cluster_range)))
@@ -20,13 +19,15 @@ def find_optimal_dimension_and_clusters(data, max_dim=20, max_clusters=20):
     best_cluster = None
 
     for i, dim in enumerate(dim_range):
-        umap_model = UMAP(n_components=dim, random_state=0)
+        print(f"==========process UMAP dim={dim}==========")
+        umap_model = UMAP(n_components=dim)
         data = umap_model.fit_transform(train_data)
         for j, n_clusters in enumerate(cluster_range):
-            kmeans = KMeans(n_clusters=n_clusters, random_state=0)
+            print(f"==========process KMeans clusters={n_clusters}==========")
+            kmeans = KMeans(n_clusters=n_clusters)
             labels = kmeans.fit_predict(data)
             try:
-                score = silhouette_score(data, labels)
+                score = cython_silhouette_score(data, labels)
             except Exception:
                 score = -1
             scores[i, j] = score
@@ -34,11 +35,9 @@ def find_optimal_dimension_and_clusters(data, max_dim=20, max_clusters=20):
                 best_score = score
                 best_dim = dim
                 best_cluster = n_clusters
-            print(f"UMAP dim={dim}, KMeans clusters={n_clusters}, Silhouette Score={score:.4f}")
+            print(f"UMAP dim={dim}, KMeans clusters={n_clusters}, Score={score:.4f}")
 
-    print(
-        f"\nBest UMAP dim: {best_dim}, Best KMeans clusters: {best_cluster}, Best Silhouette Score: {best_score:.4f}"
-    )
+    print(f"\nBest UMAP dim: {best_dim}, Best KMeans clusters: {best_cluster}, Best Score: {best_score:.4f}")
     # 畫熱力圖
     plt.figure(figsize=(8, 6))
     plt.imshow(
@@ -48,13 +47,32 @@ def find_optimal_dimension_and_clusters(data, max_dim=20, max_clusters=20):
         extent=[min(cluster_range), max(cluster_range), min(dim_range), max(dim_range)],
         cmap="viridis",
     )
-    plt.colorbar(label="Silhouette Score")
+    plt.colorbar(label="Score")
     plt.xlabel("KMeans n_clusters")
     plt.ylabel("UMAP n_components")
-    plt.title("Silhouette Score Heatmap")
+    plt.title("Score Heatmap")
     plt.scatter([best_cluster], [best_dim], color="red", label="Best", marker="x")
     plt.legend()
-    plt.show()
+    plt.savefig("heatmap.png")
+
+
+def find_optimal_clusters(data, max_k=100):
+    """
+    Using the elbow method to find the optimal number of clusters
+    """
+    inertias = []
+    cluster_range = range(1, max_k + 1)
+    for n in cluster_range:
+        print(f"process KMeans with n_clusters={n}")
+        kmeans = KMeans(n_clusters=n, random_state=42)
+        kmeans.fit(data)
+        inertias.append(kmeans.inertia_)
+
+    plt.plot(cluster_range, inertias, marker="o")
+    plt.xlabel("Number of clusters")
+    plt.ylabel("Inertia (SSE)")
+    plt.title("Elbow Method For Optimal k")
+    plt.savefig("elbow.png")
 
 
 def plot_clusters(data, labels, centers):
@@ -67,7 +85,8 @@ def plot_clusters(data, labels, centers):
         plt.scatter(centers[:, 0], centers[:, 1], c="red", marker="X", s=200, label="Centers")
         plt.title("KMeans Clustering Result (2D)")
         plt.legend()
-        plt.show()
+        plt.savefig("clusters.png")
+
     elif data.shape[1] == 3:
         fig = plt.figure()
         ax = fig.add_subplot(111, projection="3d")
@@ -81,24 +100,21 @@ def plot_clusters(data, labels, centers):
             s=200,
         )
         ax.set_title("KMeans Clustering Result (3D)")
-        plt.show()
+        plt.savefig("clusters.png")
+
     else:
         print("Data is not 2D or 3D, skipping plot.")
 
 
 if __name__ == "__main__":
-    train_data, train_labels, test_data, test_labels = data_loader(which=1)
+    train_data, train_labels, test_data, test_labels = data_loader(which=3)
     train_data = train_data.T
-    find_optimal_dimension_and_clusters(train_data)
-    # test_data = test_data.T
+    test_data = test_data.T
     # # Apply UMAP for dimensionality reduction
     # print("==========process UMAP==========")
     # umap_model = UMAP(n_components=DIM, random_state=0)
     # train_data_umap = umap_model.fit_transform(train_data)
     # test_data_umap = umap_model.transform(test_data)
-
-    # # # Using the elbow method to find the optimal n_clusters
-    # # find_optimal_clusters(train_data_umap, max_k=10)
 
     # print("==========process KMeans==========")
     # kmeans = KMeans(n_clusters=CLUSTER_NUM, random_state=0)
@@ -108,3 +124,8 @@ if __name__ == "__main__":
 
     # Plot the clusters
     # plot_clusters(train_data_umap, kmeans.labels_, kmeans.cluster_centers_)
+
+    ### Test Code ###
+    find_optimal_dimension_and_clusters(train_data)
+    ### Using the elbow method to find the optimal n_clusters
+    # find_optimal_clusters(train_data_umap)
