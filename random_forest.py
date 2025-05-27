@@ -87,7 +87,6 @@ def main():
     recall = confusion_matrix[0, 0] / np.sum(confusion_matrix[:, 0])
     f1_score = 2 * precision * recall / (precision + recall)
     print(f'F1 score: {f1_score}\nAccuracy: {accuracy}')
-    print()
 
 if __name__ == '__main__':
     main()
