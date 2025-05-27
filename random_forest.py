@@ -54,7 +54,7 @@ def main():
             print('=====' * 20)
 
         print('Training...')
-        model = sklearn.ensemble.RandomForestClassifier()
+        model = sklearn.ensemble.RandomForestClassifier(n_estimators = 100, criterion = 'entropy')
         model.fit(train_data.T, train_label)
 
         with open(model_path, 'wb') as file:
