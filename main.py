@@ -43,11 +43,12 @@ def data_preprocess(data, train_data, cal_difference):
     Notice that we also need to pass train data into this function
     Since when normalizing the data, we need to use the mean and std of the train data to normalize the target data
     """
-    data['Open'] = data['Open'].diff()
-    data['High'] = data['High'].diff()
-    data['Low'] = data['Low'].diff()
-    data['Close'] = data['Close'].diff()
-    data['Volume'] = data['Volume'].diff()
+    if cal_difference:
+        data['Open'] = data['Open'].diff()
+        data['High'] = data['High'].diff()
+        data['Low'] = data['Low'].diff()
+        data['Close'] = data['Close'].diff()
+        data['Volume'] = data['Volume'].diff()
 
     data.dropna(inplace = True)
     data = data[['Open', 'High', 'Low', 'Close', 'Volume']].copy().to_numpy()
