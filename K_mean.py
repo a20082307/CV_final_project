@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from cuml import UMAP, KMeans
 from cuml.metrics.cluster.silhouette_score import cython_silhouette_score
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
+from sklearn.metrics import confusion_matrix
 
 from main import data_loader
 
@@ -142,7 +142,51 @@ def plot_clusters(data, labels, centers):
         print("Data is not 2D or 3D, skipping plot.")
 
 
-def test():
+def calculate_evaluation_metrics(y_true, y_pred):
+    """
+    Calculate evaluation metrics: precision, recall, and F1-score
+    """
+    # Get all true positives, false positives, and false negatives from confusion matrix
+    tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()
+
+    # Calculate global metrics
+    accuracy = (tp + tn) / (tp + tn + fp + fn) if (tp + tn + fp + fn) > 0 else 0
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0
+    f1_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
+
+    cm_display = np.array([[tp, fp], [fn, tn]])
+    print(f"Confusion Matrix:\n{cm_display}")
+    # Visualize confusion matrix
+    plt.figure(figsize=(8, 6))
+    plt.imshow(cm_display, interpolation="nearest", cmap=plt.cm.Blues)
+    plt.title("Confusion Matrix")
+    plt.colorbar()
+    tick_marks = [0, 1]
+    plt.xticks(tick_marks, ["Positive", "Negative"])
+    plt.yticks(tick_marks, ["Positive", "Negative"])
+    plt.xlabel("Predicted Label")
+    plt.ylabel("True Label")
+
+    # Add text annotations in the cells
+    thresh = (tp + tn) / 2
+    for i in range(2):
+        for j in range(2):
+            plt.text(
+                j,
+                i,
+                cm_display[i][j],
+                horizontalalignment="center",
+                color="white" if cm_display[i][j] > thresh else "black",
+            )
+
+    plt.tight_layout()
+    plt.savefig("confusion_matrix.png")
+
+    return accuracy, precision, recall, f1_score
+
+
+def predict():
     print("==========process KMeans==========")
     kmeans = KMeans(n_clusters=CLUSTER_NUM, random_state=0)
     kmeans.fit(train_data)
@@ -164,11 +208,7 @@ def test():
         # Map predicted clusters to labels
         predicted_labels = np.array([cluster_to_label.get(label, -1) for label in pred_labels])
 
-        # Calculate accuracy, precision, recall, and F1-score
-        print(f"Accuracy: {accuracy_score(test_labels,predicted_labels):.4f}")
-        print(f"Precision: {precision_score(test_labels, predicted_labels):.4f}")
-        print(f"Recall: {recall_score(test_labels, predicted_labels):.4f}")
-        print(f"F1-score: {f1_score(test_labels, predicted_labels):.4f}")
+    return predicted_labels
 
 
 if __name__ == "__main__":
@@ -176,7 +216,9 @@ if __name__ == "__main__":
     train_data = train_data.T
     test_data = test_data.T
 
-    test()
+    pred_labels = predict()
+    accuracy, precision, recall, f1_score = calculate_evaluation_metrics(test_labels, pred_labels)
+    print(f"Accuracy: {accuracy:.4f}, Precision: {precision:.4f}, Recall: {recall:.4f}, F1 Score: {f1_score:.4f}")
 
     ### Test Code ###
     # find_optimal_dimension_and_clusters(train_data)
