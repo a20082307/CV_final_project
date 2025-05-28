@@ -6,8 +6,7 @@ from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_sc
 
 from main import data_loader
 
-DIM = 50  # Set the dimension for UMAP
-CLUSTER_NUM = 3000  # Set the number of clusters for KMeans
+CLUSTER_NUM = 5  # Set the number of clusters for KMeans
 
 
 def find_optimal_dimension_and_clusters(data, max_dim=100, max_clusters=100):
@@ -98,7 +97,7 @@ def elbow_method_for_clusters(data):
     Using the elbow method to find the optimal number of clusters
     """
     inertias = []
-    cluster_range = [int(35000 / n) for n in range(187, 0, -2)]
+    cluster_range = range(1, 20)
     for n in cluster_range:
         print(f"process KMeans with n_clusters={n}")
         kmeans = KMeans(n_clusters=n, random_state=0)
