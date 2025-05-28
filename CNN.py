@@ -12,7 +12,7 @@ from CNN_dataloader import data_loader
 parser = argparse.ArgumentParser()
 parser.add_argument('--new', action = 'store_true', help = 'Create a new model')
 parser.add_argument('--name', type = str, default = 'cnn', help = 'The name of model')
-parser.add_argument('--period', type = int, default = 24, help = 'The time period of the train and test data')
+parser.add_argument('--period', type = int, default = 16, help = 'The time period of the train and test data')
 parser.add_argument('--interval', type = int, default = 1, help = 'The interval of the train and test data')
 parser.add_argument('--which', type = int, default = 1, help = 'Choose the unit of kbar, 1 means 1hr, 3 means 15mins. 2 and 4 means find the difference between each two kbar')
 parser.add_argument('--batch-size', type = int, default = 32, help = 'The batch size of the train data')
@@ -28,6 +28,7 @@ time_period = {
     5: '4hr',
     6: '4hr_diff'
 }
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
 class CNN(torch.nn.Module):
@@ -139,7 +140,8 @@ def main():
         args.period,
         args.interval
     )
-    print(train_data.shape)
+    print('=====' * 20)
+    print(f'Current device: {device}')
 
     model_path = args.name + f'_which{args.which}_period{args.period}_interval{args.interval}_batch{args.batch_size}_epochs{args.epochs}_lr{args.lr}_' + '.pkl'
     model = None
@@ -156,11 +158,15 @@ def main():
         val_label = train_label[int(len(train_label) * 0.8) : ]
         train_data = train_data[: int(len(train_data) * 0.8)]
         train_label = train_label[: int(len(train_label) * 0.8)]
+        print(f'Train data shape: {train_data.shape}, Train label shape: {train_label.shape}')
+        print(f'Validation data shape: {val_data.shape}, Validation label shape: {val_label.shape}')
+        print('=====' * 20)
 
-        train_data_tensor = torch.tensor(train_data, dtype = torch.float32)
-        train_label_tensor = torch.tensor(train_label, dtype = torch.long)
-        val_data_tensor = torch.tensor(val_data, dtype = torch.float32)
-        val_label_tensor = torch.tensor(val_label, dtype = torch.long)
+        train_data_tensor = torch.tensor(train_data, dtype = torch.float32).to(device)
+        train_label_tensor = torch.tensor(train_label, dtype = torch.long).to(device)
+        val_data_tensor = torch.tensor(val_data, dtype = torch.float32).to(device)
+        val_label_tensor = torch.tensor(val_label, dtype = torch.long).to(device)
+        model = model.to(device)
 
         print('----- Training... -----')
         train(model, train_data_tensor, train_label_tensor, val_data_tensor, val_label_tensor, criterion, optimizer)
@@ -168,11 +174,11 @@ def main():
         
         torch.save(model, model_path)
     else:
-        model = torch.load(model_path, weights_only = False)
+        model = torch.load(model_path, weights_only = False).to(device)
         print(f'Loading model from {model_path}')
 
-    test_data_tensor = torch.tensor(test_data, dtype = torch.float32)
-    test_label_tensor = torch.tensor(test_label, dtype = torch.long)
+    test_data_tensor = torch.tensor(test_data, dtype = torch.float32).to(device)
+    test_label_tensor = torch.tensor(test_label, dtype = torch.long).to(device)
     print('----- Testing... -----')
     test(model, test_data_tensor, test_label_tensor, criterion)
     print('=====' * 20)

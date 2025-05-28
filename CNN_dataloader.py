@@ -77,11 +77,11 @@ def generate_labels(data, price, time_period = 24, interval = 1):
     dataset = []
     labels = []
     for i in range(len(data) - time_period - interval):
-        dataset.append(data[i : i + time_period])
+        dataset.append(data[i : i + time_period].T)
         labels.append(price[i + time_period + interval - 1][3] > price[i][3])
     
     dataset = np.array(dataset).T
-    dataset = dataset.reshape((-1, dataset.shape[-1]))
+    # dataset = dataset.reshape((-1, dataset.shape[-1]))
     # print(dataset.shape)
 
     labels = np.array(labels)
