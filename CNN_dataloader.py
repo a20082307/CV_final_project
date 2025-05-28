@@ -1,0 +1,100 @@
+import numpy as np
+import pandas as pd
+
+def data_loader(which = 1, time_period = 24, interval = 1):
+    """
+    Load the data from the CSV file
+    The data contains the price of bitcoin from 2021 to 2024
+    The time unit of each K line is 1 hour
+    Each data contains "time_period" K lines
+    We want to predict the direction of the close price in the next "interval" K lines
+    """
+    data_path = {
+        1: ['train_15min.csv', 'test_15min.csv'],
+        2: ['train_15min.csv', 'test_15min.csv'],
+        3: ['train.csv', 'test.csv'],
+        4: ['train.csv', 'test.csv'],
+        5: ['train_4hr.csv', 'test_4hr.csv'],
+        6: ['train_4hr.csv', 'test_4hr.csv']
+    }
+
+    if which > len(data_path) or which < 1:
+        raise ValueError(f'No such kind of data, We only have [{len(data_path)}] kinds of data, but you require [{which}]th kind of data')
+
+    train_data_csv = pd.read_csv(data_path[which][0])
+    train_data_csv['Open Time'] = pd.to_datetime(train_data_csv['Open Time'], unit = 'ms')
+    tem_train_data = train_data_csv[['Open', 'High', 'Low', 'Close', 'Volume']].copy()
+    train_data = data_preprocess(tem_train_data, tem_train_data, which % 2 == 0)
+    train_dataset, train_labels = generate_labels(train_data, tem_train_data.to_numpy(), time_period, interval)
+
+    test_data_csv = pd.read_csv(data_path[which][1])
+    test_data_csv['Open Time'] = pd.to_datetime(test_data_csv['Open Time'], unit = 'ms')
+    tem_test_data = test_data_csv[['Open', 'High', 'Low', 'Close', 'Volume']].copy()
+    test_data = data_preprocess(tem_test_data, tem_train_data, which % 2 == 0)
+    test_dataset, test_labels = generate_labels(test_data, tem_test_data.to_numpy(), time_period, interval)
+
+    return train_dataset.T, train_labels, test_dataset.T, test_labels
+
+def data_preprocess(data, train_data, cal_difference):
+    """
+    Calculate the difference between price[t] and price[t-1] for all features including volume
+    Notice that we also need to pass train data into this function
+    Since when normalizing the data, we need to use the mean and std of the train data to normalize the target data
+    """
+    if cal_difference:
+        data['Open'] = data['Open'].diff()
+        data['High'] = data['High'].diff()
+        data['Low'] = data['Low'].diff()
+        data['Close'] = data['Close'].diff()
+        data['Volume'] = data['Volume'].diff()
+
+    data.dropna(inplace = True)
+    data = data[['Open', 'High', 'Low', 'Close', 'Volume']].copy().to_numpy()
+    # print(data.shape)
+    # print(data[:5, :])
+    # print(data[-5:, :])
+
+    if cal_difference:
+        train_data['Open'] = train_data['Open'].diff()
+        train_data['High'] = train_data['High'].diff()
+        train_data['Low'] = train_data['Low'].diff()
+        train_data['Close'] = train_data['Close'].diff()
+        train_data['Volume'] = train_data['Volume'].diff()
+
+    train_data.dropna(inplace = True)
+    train_data = train_data[['Open', 'High', 'Low', 'Close', 'Volume']].copy().to_numpy()
+
+    # Normalize the data
+    for i in range(5):
+        data[:, i] = (data[:, i] - np.mean(train_data[:, i])) / np.std(train_data[:, i])
+        
+    return data
+
+def generate_labels(data, price, time_period = 24, interval = 1):
+    """
+    Generate the dataset and the labels for the data
+    """
+    dataset = []
+    labels = []
+    for i in range(len(data) - time_period - interval):
+        dataset.append(data[i : i + time_period])
+        labels.append(price[i + time_period + interval - 1][3] > price[i][3])
+    
+    dataset = np.array(dataset).T
+    dataset = dataset.reshape((-1, dataset.shape[-1]))
+    # print(dataset.shape)
+
+    labels = np.array(labels)
+    # print(labels.shape)
+
+    return dataset, labels
+
+
+if __name__ == '__main__':
+    train_data, train_label, test_data, test_label = data_loader(
+        which=1,
+        time_period=24,
+        interval=1
+    )
+    print(f'Train data shape: {train_data.shape}, Train label shape: {train_label.shape}')
+    print(f'Test data shape: {test_data.shape}, Test label shape: {test_label.shape}')
