@@ -27,13 +27,13 @@ def data_loader(which = 1, time_period = 24, interval = 1):
     train_data_csv['Open Time'] = pd.to_datetime(train_data_csv['Open Time'], unit = 'ms')
     tem_train_data = train_data_csv[['Open', 'High', 'Low', 'Close', 'Volume']].copy()
     train_data = data_preprocess(tem_train_data, tem_train_data, which % 2 == 0)
-    train_dataset, train_labels = generate_labels(train_data, time_period, interval)
+    train_dataset, train_labels = generate_labels(train_data, tem_train_data.to_numpy(), time_period, interval)
 
     test_data_csv = pd.read_csv(data_path[which][1])
     test_data_csv['Open Time'] = pd.to_datetime(test_data_csv['Open Time'], unit = 'ms')
     tem_test_data = test_data_csv[['Open', 'High', 'Low', 'Close', 'Volume']].copy()
     test_data = data_preprocess(tem_test_data, tem_train_data, which % 2 == 0)
-    test_dataset, test_labels = generate_labels(test_data, time_period, interval)
+    test_dataset, test_labels = generate_labels(test_data, tem_test_data.to_numpy(), time_period, interval)
 
     return train_dataset, train_labels, test_dataset, test_labels
 
@@ -43,11 +43,12 @@ def data_preprocess(data, train_data, cal_difference):
     Notice that we also need to pass train data into this function
     Since when normalizing the data, we need to use the mean and std of the train data to normalize the target data
     """
-    data['Open'] = data['Open'].diff()
-    data['High'] = data['High'].diff()
-    data['Low'] = data['Low'].diff()
-    data['Close'] = data['Close'].diff()
-    data['Volume'] = data['Volume'].diff()
+    if cal_difference:
+        data['Open'] = data['Open'].diff()
+        data['High'] = data['High'].diff()
+        data['Low'] = data['Low'].diff()
+        data['Close'] = data['Close'].diff()
+        data['Volume'] = data['Volume'].diff()
 
     data.dropna(inplace = True)
     data = data[['Open', 'High', 'Low', 'Close', 'Volume']].copy().to_numpy()
@@ -71,7 +72,7 @@ def data_preprocess(data, train_data, cal_difference):
         
     return data
 
-def generate_labels(data, time_period = 24, interval = 1):
+def generate_labels(data, price, time_period = 24, interval = 1):
     """
     Generate the dataset and the labels for the data
     """
@@ -79,7 +80,7 @@ def generate_labels(data, time_period = 24, interval = 1):
     labels = []
     for i in range(len(data) - time_period - interval):
         dataset.append(data[i : i + time_period])
-        labels.append(data[i + time_period + interval - 1][4] > data[i + time_period - 1][4])
+        labels.append(price[i + time_period + interval - 1][3] > price[i][3])
     
     dataset = np.array(dataset).T
     dataset = dataset.reshape((-1, dataset.shape[-1]))
