@@ -70,7 +70,7 @@ if __name__ == "__main__":
     # train_data_pca = pca.transform(train_data)  # shape: (n_samples, 9)
     # test_data_pca = pca.transform(test_data)  # shape: (n_samples, 9)
 
-    knn = KNeighborsClassifier(n_neighbors=29)
+    knn = KNeighborsClassifier(n_neighbors=85)
 
     # Step 5: 訓練模型
     knn.fit(train_data, train_label)
