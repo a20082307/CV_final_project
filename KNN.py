@@ -1,5 +1,3 @@
-from datetime import datetime
-
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -20,6 +18,7 @@ def calculate_evaluation_metrics(y_true, y_pred):
     tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()
 
     # Calculate global metrics
+    accuracy = (tp + tn) / (tp + tn + fp + fn) if (tp + tn + fp + fn) > 0 else 0
     precision = tp / (tp + fp) if (tp + fp) > 0 else 0
     recall = tp / (tp + fn) if (tp + fn) > 0 else 0
     f1_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
@@ -34,8 +33,8 @@ def calculate_evaluation_metrics(y_true, y_pred):
     tick_marks = [0, 1]
     plt.xticks(tick_marks, ["Positive", "Negative"])
     plt.yticks(tick_marks, ["Positive", "Negative"])
-    plt.xlabel("Predicted Label")
-    plt.ylabel("True Label")
+    plt.xlabel("True Label")
+    plt.ylabel("Predicted Label")
 
     # Add text annotations in the cells
     thresh = (tp + tn) / 2
@@ -52,7 +51,7 @@ def calculate_evaluation_metrics(y_true, y_pred):
     plt.tight_layout()
     plt.show()
 
-    return precision, recall, f1_score
+    return accuracy, precision, recall, f1_score
 
 
 def find_optimal_k(X, y, k_range=range(1, 101, 2)):
@@ -94,7 +93,7 @@ def find_optimal_k(X, y, k_range=range(1, 101, 2)):
     plt.ylabel("F1 Score (CV Average)")
     plt.grid(True)
     plt.legend()
-    plt.savefig(f"optimal_k_{datetime.now().strftime('%m%d_%H%M%S')}.png", dpi=300, bbox_inches="tight")
+    plt.savefig(f"optimal_k.png", dpi=300, bbox_inches="tight")
     plt.show()
 
     print(f"The optimal number of neighbors is: {best_k} with F1 score: {cv_scores[best_k]:.4f}")
@@ -129,8 +128,9 @@ if __name__ == "__main__":
     y_pred = knn.predict(test_data)
 
     # Step 7: 評估模型表現
-    precision, recall, f1_score = calculate_evaluation_metrics(test_label, y_pred)
+    accuracy, precision, recall, f1_score = calculate_evaluation_metrics(test_label, y_pred)
 
+    print(f"Accuracy: {accuracy:.4f}")
     print(f"Precision: {precision:.4f}")
     print(f"Recall: {recall:.4f}")
     print(f"F1-score: {f1_score:.4f}")
