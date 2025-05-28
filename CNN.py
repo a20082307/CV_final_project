@@ -4,6 +4,8 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import sklearn
+import sklearn.metrics
 import torch
 
 from tqdm import tqdm
@@ -119,6 +121,7 @@ def test(model, test_data, test_label, criterion):
     model.eval()
     val_loss = 0.0
     correct = 0
+    prediction = []
     with torch.no_grad():
         for i in tqdm(range(0, len(test_data)), desc = 'Validating: '):
             input_data = test_data[i].unsqueeze(0)  
@@ -129,10 +132,54 @@ def test(model, test_data, test_label, criterion):
             val_loss += criterion(output, label).item()
             pred = output.argmax(dim = 1, keepdim = True)
             correct += pred.eq(test_label[i].view_as(pred)).sum().item()
+            prediction.append(pred.item())
 
     val_loss /= len(test_data)
     accuracy = correct / len(test_data)
     print(f'Test Loss: {val_loss:.4f}, Accuracy: {accuracy:.4f}')
+    calculate_evaluation_metrics(test_label.cpu().numpy(), pred.cpu().numpy())
+
+def calculate_evaluation_metrics(y_true, y_pred):
+    """
+    Calculate evaluation metrics: precision, recall, and F1-score
+    """
+    # Get all true positives, false positives, and false negatives from confusion matrix
+    tn, fp, fn, tp = sklearn.metrics.confusion_matrix(y_true, y_pred).ravel()
+
+    # Calculate global metrics
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0
+    f1_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
+
+    cm_display = np.array([[tp, fp], [fn, tn]])
+    print(f"Confusion Matrix:\n{cm_display}")
+    # Visualize confusion matrix
+    plt.figure(figsize=(8, 6))
+    plt.imshow(cm_display, interpolation="nearest", cmap=plt.cm.Blues)
+    plt.title("Confusion Matrix")
+    plt.colorbar()
+    tick_marks = [0, 1]
+    plt.xticks(tick_marks, ["Positive", "Negative"])
+    plt.yticks(tick_marks, ["Positive", "Negative"])
+    plt.xlabel("Predicted Label")
+    plt.ylabel("True Label")
+
+    # Add text annotations in the cells
+    thresh = (tp + tn) / 2
+    for i in range(2):
+        for j in range(2):
+            plt.text(
+                j,
+                i,
+                cm_display[i][j],
+                horizontalalignment="center",
+                color="white" if cm_display[i][j] > thresh else "black",
+            )
+
+    plt.tight_layout()
+    plt.show()
+
+    return precision, recall, f1_score
 
 def main():
     train_data, train_label, test_data, test_label = data_loader(
