@@ -2,8 +2,8 @@ from datetime import datetime
 
 import matplotlib.pyplot as plt
 import numpy as np
-import umap
-from sklearn.decomposition import PCA
+# import umap
+# from sklearn.decomposition import PCA
 from sklearn.metrics import confusion_matrix
 from sklearn.neighbors import KNeighborsClassifier
 
@@ -59,12 +59,12 @@ if __name__ == "__main__":
     test_data = test_data.T
 
     # Fit PCA on training data (samples as rows, features as columns)
-    pca = PCA(n_components=9)
-    pca.fit(train_data)  # train_data shape: (n_samples, n_features)
+    # pca = PCA(n_components=9)
+    # pca.fit(train_data)  # train_data shape: (n_samples, n_features)
 
-    reducer = umap.UMAP(n_components=12, random_state=0)
-    train_data_pca = reducer.fit_transform(train_data)
-    test_data_pca = reducer.transform(test_data)
+    # reducer = umap.UMAP(n_components=12, random_state=0)
+    # train_data_pca = reducer.fit_transform(train_data)
+    # test_data_pca = reducer.transform(test_data)
 
     # Transform both train and test data using the same PCA object
     # train_data_pca = pca.transform(train_data)  # shape: (n_samples, 9)
@@ -73,10 +73,10 @@ if __name__ == "__main__":
     knn = KNeighborsClassifier(n_neighbors=29)
 
     # Step 5: 訓練模型
-    knn.fit(train_data_pca, train_label)
+    knn.fit(train_data, train_label)
 
     # Step 6: 預測
-    y_pred = knn.predict(test_data_pca)
+    y_pred = knn.predict(test_data)
 
     # Step 7: 評估模型表現
     precision, recall, f1_score = calculate_evaluation_metrics(test_label, y_pred)
