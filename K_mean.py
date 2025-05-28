@@ -2,11 +2,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 from cuml import UMAP, KMeans
 from cuml.metrics.cluster.silhouette_score import cython_silhouette_score
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 
 from main import data_loader
 
 DIM = 50  # Set the dimension for UMAP
-CLUSTER_NUM = 7005  # Set the number of clusters for KMeans
+CLUSTER_NUM = 3000  # Set the number of clusters for KMeans
 
 
 def find_optimal_dimension_and_clusters(data, max_dim=100, max_clusters=100):
@@ -142,57 +143,44 @@ def plot_clusters(data, labels, centers):
         print("Data is not 2D or 3D, skipping plot.")
 
 
+def test():
+    print("==========process KMeans==========")
+    kmeans = KMeans(n_clusters=CLUSTER_NUM, random_state=0)
+    kmeans.fit(train_data)
+    cluster_labels = kmeans.labels_
+
+    # Predict clusters for test data
+    print("==========process Prediction==========")
+    pred_labels = kmeans.predict(test_data)
+
+    # Calculate accuracy if we have ground truth labels
+    if train_labels is not None and test_labels is not None:
+        # Create a mapping from clusters to majority class
+        cluster_to_label = {}
+        for i in range(CLUSTER_NUM):
+            mask = cluster_labels == i
+            if np.any(mask):
+                cluster_to_label[i] = np.bincount(train_labels[mask]).argmax()
+
+        # Map predicted clusters to labels
+        predicted_labels = np.array([cluster_to_label.get(label, -1) for label in pred_labels])
+
+        # Calculate accuracy, precision, recall, and F1-score
+        print(f"Accuracy: {accuracy_score(test_labels,predicted_labels):.4f}")
+        print(f"Precision: {precision_score(test_labels, predicted_labels):.4f}")
+        print(f"Recall: {recall_score(test_labels, predicted_labels):.4f}")
+        print(f"F1-score: {f1_score(test_labels, predicted_labels):.4f}")
+
+
 if __name__ == "__main__":
     train_data, train_labels, test_data, test_labels = data_loader(which=3)
     train_data = train_data.T
     test_data = test_data.T
-    # # Apply UMAP for dimensionality reduction
-    # print("==========process UMAP==========")
-    # umap_model = UMAP(n_components=DIM, random_state=0)
-    # train_data = umap_model.fit_transform(train_data)
-    # test_data = umap_model.transform(test_data)
-    # plt.scatter(train_data[:, 0], train_data[:, 1], c=train_labels)
-    # plt.title("Data with True Labels")
-    # plt.savefig("data_with_labels.png")
 
-    # print("==========process KMeans==========")
-    # kmeans = KMeans(n_clusters=CLUSTER_NUM, random_state=0)
-    # kmeans.fit(train_data)
-    # # 獲取 K-Means 的聚類標籤
-    # cluster_labels = kmeans.labels_
-
-    # # Predict clusters for test data
-    # print("==========process Prediction==========")
-    # pred_labels = kmeans.predict(test_data)
-
-    # # Calculate accuracy if we have ground truth labels
-    # if train_labels is not None and test_labels is not None:
-    #     # Create a mapping from clusters to majority class
-    #     cluster_to_label = {}
-    #     for i in range(CLUSTER_NUM):
-    #         mask = cluster_labels == i
-    #         if np.any(mask):
-    #             cluster_to_label[i] = np.bincount(train_labels[mask]).argmax()
-
-    #     # Map predicted clusters to labels
-    #     predicted_labels = np.array([cluster_to_label.get(label, -1) for label in pred_labels])
-
-    #     # Calculate accuracy
-    #     accuracy = np.mean(predicted_labels == test_labels)
-    #     print(f"Test accuracy: {accuracy:.4f}")
-
-    # 可視化聚類結果
-    # plt.scatter(train_data[:, 0], train_data[:, 1], c=cluster_labels)
-    # plt.title("K-Means Clustering Results")
-    # plt.savefig("kmeans_clustering_results.png")
-
-    # print("Cluster centers:\n", kmeans.cluster_centers_)
-
-    # Plot the clusters
-    # plot_clusters(train_data_umap, kmeans.labels_, kmeans.cluster_centers_)
+    test()
 
     ### Test Code ###
     # find_optimal_dimension_and_clusters(train_data)
     ### Using the elbow method to find the optimal n_clusters
-    elbow_method_for_clusters(train_data)
+    # elbow_method_for_clusters(train_data)
     # silhouette_score_for_clusters(train_data, max_clusters=350)
