@@ -165,8 +165,8 @@ def calculate_evaluation_metrics(y_true, y_pred):
     tick_marks = [0, 1]
     plt.xticks(tick_marks, ["Positive", "Negative"])
     plt.yticks(tick_marks, ["Positive", "Negative"])
-    plt.xlabel("Predicted Label")
-    plt.ylabel("True Label")
+    plt.xlabel("True Label")
+    plt.ylabel("Predicted Label")
 
     # Add text annotations in the cells
     thresh = (tp + tn) / 2
