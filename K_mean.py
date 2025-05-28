@@ -5,8 +5,8 @@ from cuml.metrics.cluster.silhouette_score import cython_silhouette_score
 
 from main import data_loader
 
-DIM = 2  # Set the dimension for UMAP
-CLUSTER_NUM = 25  # Set the number of clusters for KMeans
+DIM = 50  # Set the dimension for UMAP
+CLUSTER_NUM = 7005  # Set the number of clusters for KMeans
 
 
 def find_optimal_dimension_and_clusters(data, max_dim=100, max_clusters=100):
@@ -56,15 +56,51 @@ def find_optimal_dimension_and_clusters(data, max_dim=100, max_clusters=100):
     plt.savefig("heatmap.png")
 
 
-def find_optimal_clusters(data, max_k=100):
+def silhouette_score_for_clusters(data, max_clusters=350):
+    """
+    Find the optimal number of clusters using silhouette score
+    """
+    scores = []
+    cluster_range = range(2, max_clusters + 1)
+    best_score = -1
+    best_n_clusters = 2
+
+    plt.figure(figsize=(10, 6))
+    for n in cluster_range:
+        print(f"Calculating silhouette score for n_clusters={n}")
+        kmeans = KMeans(n_clusters=n, random_state=0)
+        labels = kmeans.fit_predict(data)
+        try:
+            score = cython_silhouette_score(data, labels)
+            scores.append(score)
+            if score > best_score:
+                best_score = score
+                best_n_clusters = n
+            print(f"n_clusters={n}, silhouette score={score:.4f}")
+        except Exception as e:
+            print(f"Error calculating silhouette score for n_clusters={n}: {e}")
+            scores.append(-1)
+
+    plt.plot(cluster_range, scores, marker="o")
+    plt.xlabel("Number of clusters")
+    plt.ylabel("Silhouette Score")
+    plt.title(f"Silhouette Analysis (Best n_clusters: {best_n_clusters})")
+    plt.axvline(x=best_n_clusters, color="r", linestyle="--", label=f"Best n_clusters: {best_n_clusters}")
+    plt.legend()
+    plt.savefig("silhouette_analysis.png")
+    print(f"Best number of clusters: {best_n_clusters} with score: {best_score:.4f}")
+    return best_n_clusters
+
+
+def elbow_method_for_clusters(data):
     """
     Using the elbow method to find the optimal number of clusters
     """
     inertias = []
-    cluster_range = range(1, max_k + 1)
+    cluster_range = [int(35000 / n) for n in range(187, 0, -2)]
     for n in cluster_range:
         print(f"process KMeans with n_clusters={n}")
-        kmeans = KMeans(n_clusters=n, random_state=42)
+        kmeans = KMeans(n_clusters=n, random_state=0)
         kmeans.fit(data)
         inertias.append(kmeans.inertia_)
 
@@ -113,12 +149,42 @@ if __name__ == "__main__":
     # # Apply UMAP for dimensionality reduction
     # print("==========process UMAP==========")
     # umap_model = UMAP(n_components=DIM, random_state=0)
-    # train_data_umap = umap_model.fit_transform(train_data)
-    # test_data_umap = umap_model.transform(test_data)
+    # train_data = umap_model.fit_transform(train_data)
+    # test_data = umap_model.transform(test_data)
+    # plt.scatter(train_data[:, 0], train_data[:, 1], c=train_labels)
+    # plt.title("Data with True Labels")
+    # plt.savefig("data_with_labels.png")
 
     # print("==========process KMeans==========")
     # kmeans = KMeans(n_clusters=CLUSTER_NUM, random_state=0)
-    # kmeans.fit(train_data_umap)
+    # kmeans.fit(train_data)
+    # # 獲取 K-Means 的聚類標籤
+    # cluster_labels = kmeans.labels_
+
+    # # Predict clusters for test data
+    # print("==========process Prediction==========")
+    # pred_labels = kmeans.predict(test_data)
+
+    # # Calculate accuracy if we have ground truth labels
+    # if train_labels is not None and test_labels is not None:
+    #     # Create a mapping from clusters to majority class
+    #     cluster_to_label = {}
+    #     for i in range(CLUSTER_NUM):
+    #         mask = cluster_labels == i
+    #         if np.any(mask):
+    #             cluster_to_label[i] = np.bincount(train_labels[mask]).argmax()
+
+    #     # Map predicted clusters to labels
+    #     predicted_labels = np.array([cluster_to_label.get(label, -1) for label in pred_labels])
+
+    #     # Calculate accuracy
+    #     accuracy = np.mean(predicted_labels == test_labels)
+    #     print(f"Test accuracy: {accuracy:.4f}")
+
+    # 可視化聚類結果
+    # plt.scatter(train_data[:, 0], train_data[:, 1], c=cluster_labels)
+    # plt.title("K-Means Clustering Results")
+    # plt.savefig("kmeans_clustering_results.png")
 
     # print("Cluster centers:\n", kmeans.cluster_centers_)
 
@@ -126,6 +192,7 @@ if __name__ == "__main__":
     # plot_clusters(train_data_umap, kmeans.labels_, kmeans.cluster_centers_)
 
     ### Test Code ###
-    find_optimal_dimension_and_clusters(train_data)
+    # find_optimal_dimension_and_clusters(train_data)
     ### Using the elbow method to find the optimal n_clusters
-    # find_optimal_clusters(train_data_umap)
+    elbow_method_for_clusters(train_data)
+    # silhouette_score_for_clusters(train_data, max_clusters=350)
