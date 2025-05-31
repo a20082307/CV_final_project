@@ -1,8 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from cuml import UMAP, KMeans
+from cuml.metrics import confusion_matrix
 from cuml.metrics.cluster.silhouette_score import cython_silhouette_score
-from sklearn.metrics import confusion_matrix
 
 from main import data_loader
 
@@ -147,8 +147,7 @@ def calculate_evaluation_metrics(y_true, y_pred):
     Calculate evaluation metrics: precision, recall, and F1-score
     """
     # Get all true positives, false positives, and false negatives from confusion matrix
-    tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()
-
+    tn, fp, fn, tp = confusion_matrix(y_true.astype(int), y_pred).ravel().tolist()
     # Calculate global metrics
     accuracy = (tp + tn) / (tp + tn + fp + fn) if (tp + tn + fp + fn) > 0 else 0
     precision = tp / (tp + fp) if (tp + fp) > 0 else 0
