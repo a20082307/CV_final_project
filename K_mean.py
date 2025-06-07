@@ -1,3 +1,5 @@
+import argparse
+
 import matplotlib.pyplot as plt
 import numpy as np
 from cuml import UMAP, KMeans
@@ -6,7 +8,27 @@ from cuml.metrics.cluster.silhouette_score import cython_silhouette_score
 
 from main import data_loader
 
-CLUSTER_NUM = 5  # Set the number of clusters for KMeans
+CLUSTER_NUM = [6, 6, 5, 5, 5, 5]  # Set the number of clusters for KMeans
+
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "-o", "--optimize", action="store_true", help="Optimize the number of clusters and UMAP dimensions"
+)
+parser.add_argument(
+    "-s",
+    "--silhouette",
+    action="store_true",
+    help="Use silhouette score to find optimal number of clusters",
+)
+parser.add_argument("-e", "--elbow", action="store_true", help="Use elbow method to find optimal number of clusters")
+parser.add_argument(
+    "-w",
+    "--which",
+    type=int,
+    default=3,
+    help="Choose the unit of kbar, 1 means 15mins, 3 means 1hr, and 5 means 4hr. 2, 4, and 6 means find the difference between each two kbar",
+)
+args = parser.parse_args()
 
 
 def find_optimal_dimension_and_clusters(data, max_dim=100, max_clusters=100):
@@ -109,6 +131,7 @@ def elbow_method_for_clusters(data):
     plt.ylabel("Inertia (SSE)")
     plt.title("Elbow Method For Optimal k")
     plt.savefig("elbow.png")
+    print("Elbow method plot saved as 'elbow.png'.")
 
 
 def plot_clusters(data, labels, centers):
@@ -186,8 +209,8 @@ def calculate_evaluation_metrics(y_true, y_pred):
 
 
 def predict():
-    print("==========process KMeans==========")
-    kmeans = KMeans(n_clusters=CLUSTER_NUM, random_state=0)
+    print(f"==========process KMeans with {CLUSTER_NUM[args.which - 1]} clusters==========")
+    kmeans = KMeans(n_clusters=CLUSTER_NUM[args.which - 1], random_state=0)
     kmeans.fit(train_data)
     cluster_labels = kmeans.labels_
 
@@ -199,7 +222,7 @@ def predict():
     if train_labels is not None and test_labels is not None:
         # Create a mapping from clusters to majority class
         cluster_to_label = {}
-        for i in range(CLUSTER_NUM):
+        for i in range(CLUSTER_NUM[args.which - 1]):
             mask = cluster_labels == i
             if np.any(mask):
                 cluster_to_label[i] = np.bincount(train_labels[mask]).argmax()
@@ -211,16 +234,23 @@ def predict():
 
 
 if __name__ == "__main__":
-    train_data, train_labels, test_data, test_labels = data_loader(which=3)
+    train_data, train_labels, test_data, test_labels = data_loader(which=args.which)
+    print(f"========== Data Loaded for unit {args.which} ==========")
     train_data = train_data.T
     test_data = test_data.T
 
-    pred_labels = predict()
-    accuracy, precision, recall, f1_score = calculate_evaluation_metrics(test_labels, pred_labels)
-    print(f"Accuracy: {accuracy:.4f}, Precision: {precision:.4f}, Recall: {recall:.4f}, F1 Score: {f1_score:.4f}")
+    if not args.optimize and not args.silhouette and not args.elbow:
+        pred_labels = predict()
+        accuracy, precision, recall, f1_score = calculate_evaluation_metrics(test_labels, pred_labels)
+        print(f"Accuracy: {accuracy:.4f}, Precision: {precision:.4f}, Recall: {recall:.4f}, F1 Score: {f1_score:.4f}")
 
     ### Test Code ###
-    # find_optimal_dimension_and_clusters(train_data)
-    ### Using the elbow method to find the optimal n_clusters
-    # elbow_method_for_clusters(train_data)
-    # silhouette_score_for_clusters(train_data, max_clusters=350)
+    if args.optimize:
+        print("========== Finding Optimal Dimension and Clusters... ==========")
+        find_optimal_dimension_and_clusters(train_data)
+    if args.silhouette:
+        print("========== Finding Optimal Clusters using Silhouette Score... ==========")
+        silhouette_score_for_clusters(train_data, max_clusters=350)
+    if args.elbow:
+        print("========== Finding Optimal Clusters using Elbow Method... ==========")
+        elbow_method_for_clusters(train_data)
