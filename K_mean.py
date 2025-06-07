@@ -111,7 +111,6 @@ def silhouette_score_for_clusters(data, max_clusters=350):
     plt.legend()
     plt.savefig("silhouette_analysis.png")
     print(f"Best number of clusters: {best_n_clusters} with score: {best_score:.4f}")
-    return best_n_clusters
 
 
 def elbow_method_for_clusters(data):
@@ -177,7 +176,7 @@ def calculate_evaluation_metrics(y_true, y_pred):
     recall = tp / (tp + fn) if (tp + fn) > 0 else 0
     f1_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
 
-    cm_display = np.array([[tp, fp], [fn, tn]])
+    cm_display = np.array([[tp, fn], [fp, tn]])
     print(f"Confusion Matrix:\n{cm_display}")
     # Visualize confusion matrix
     plt.figure(figsize=(8, 6))
@@ -187,8 +186,8 @@ def calculate_evaluation_metrics(y_true, y_pred):
     tick_marks = [0, 1]
     plt.xticks(tick_marks, ["Positive", "Negative"])
     plt.yticks(tick_marks, ["Positive", "Negative"])
-    plt.xlabel("True Label")
-    plt.ylabel("Predicted Label")
+    plt.xlabel("Predicted Label")
+    plt.ylabel("True Label")
 
     # Add text annotations in the cells
     thresh = (tp + tn) / 2
