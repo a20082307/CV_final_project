@@ -127,41 +127,10 @@ def elbow_method_for_clusters(data):
 
     plt.plot(cluster_range, inertias, marker="o")
     plt.xlabel("Number of clusters")
-    plt.ylabel("Inertia (SSE)")
+    plt.ylabel("SSE")
     plt.title("Elbow Method For Optimal k")
     plt.savefig("elbow.png")
     print("Elbow method plot saved as 'elbow.png'.")
-
-
-def plot_clusters(data, labels, centers):
-    """
-    Plot the clusters
-    """
-    print("==========process plot==========")
-    if data.shape[1] == 2:
-        plt.scatter(data[:, 0], data[:, 1], c=labels, cmap="viridis", alpha=0.5, label="Samples")
-        plt.scatter(centers[:, 0], centers[:, 1], c="red", marker="X", s=200, label="Centers")
-        plt.title("KMeans Clustering Result (2D)")
-        plt.legend()
-        plt.savefig("clusters.png")
-
-    elif data.shape[1] == 3:
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection="3d")
-        ax.scatter(data[:, 0], data[:, 1], data[:, 2], c=labels, cmap="viridis", alpha=0.5)
-        ax.scatter(
-            centers[:, 0],
-            centers[:, 1],
-            centers[:, 2],
-            c="red",
-            marker="X",
-            s=200,
-        )
-        ax.set_title("KMeans Clustering Result (3D)")
-        plt.savefig("clusters.png")
-
-    else:
-        print("Data is not 2D or 3D, skipping plot.")
 
 
 def calculate_evaluation_metrics(y_true, y_pred):
