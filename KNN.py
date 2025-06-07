@@ -1,13 +1,25 @@
+import argparse
+
 import matplotlib.pyplot as plt
 import numpy as np
-
-# import umap
-# from sklearn.decomposition import PCA
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import cross_val_score
 from sklearn.neighbors import KNeighborsClassifier
 
 from main import data_loader
+
+N_NEIGHBORS = [99, 99, 95, 95, 97, 97]
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-o", "--optimize", action="store_true", help="Optimize the number of neighbors (k) for KNN")
+parser.add_argument(
+    "-w",
+    "--which",
+    type=int,
+    default=3,
+    help="Choose the unit of kbar, 1 means 15mins, 3 means 1hr, and 5 means 4hr. 2, 4, and 6 means find the difference between each two kbar",
+)
+args = parser.parse_args()
 
 
 def calculate_evaluation_metrics(y_true, y_pred):
@@ -23,7 +35,7 @@ def calculate_evaluation_metrics(y_true, y_pred):
     recall = tp / (tp + fn) if (tp + fn) > 0 else 0
     f1_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
 
-    cm_display = np.array([[tp, fp], [fn, tn]])
+    cm_display = np.array([[tp, fn], [fp, tn]])
     print(f"Confusion Matrix:\n{cm_display}")
     # Visualize confusion matrix
     plt.figure(figsize=(8, 6))
@@ -33,8 +45,8 @@ def calculate_evaluation_metrics(y_true, y_pred):
     tick_marks = [0, 1]
     plt.xticks(tick_marks, ["Positive", "Negative"])
     plt.yticks(tick_marks, ["Positive", "Negative"])
-    plt.xlabel("True Label")
-    plt.ylabel("Predicted Label")
+    plt.xlabel("Predicted Label")
+    plt.ylabel("True Label")
 
     # Add text annotations in the cells
     thresh = (tp + tn) / 2
@@ -49,7 +61,7 @@ def calculate_evaluation_metrics(y_true, y_pred):
             )
 
     plt.tight_layout()
-    plt.show()
+    plt.savefig("confusion_matrix.png")
 
     return accuracy, precision, recall, f1_score
 
@@ -77,6 +89,7 @@ def find_optimal_k(X, y, k_range=range(1, 101, 2)):
     cv_scores = {}
 
     for k in k_range:
+        print(f"Testing k = {k}...")
         knn = KNeighborsClassifier(n_neighbors=k)
         scores = cross_val_score(knn, X, y, cv=5, scoring="f1")
         cv_scores[k] = scores.mean()
@@ -89,48 +102,28 @@ def find_optimal_k(X, y, k_range=range(1, 101, 2)):
     plt.plot(list(cv_scores.keys()), list(cv_scores.values()), marker="o")
     plt.axvline(x=best_k, color="r", linestyle="--", label=f"Best k = {best_k}")
     plt.title("Cross-Validation Scores for Different K Values")
-    plt.xlabel("Number of Neighbors (k)")
-    plt.ylabel("F1 Score (CV Average)")
+    plt.xlabel("Number of Neighbors")
+    plt.ylabel("F1 Score (Cross-Validation)")
     plt.grid(True)
     plt.legend()
     plt.savefig(f"optimal_k.png", dpi=300, bbox_inches="tight")
-    plt.show()
 
     print(f"The optimal number of neighbors is: {best_k} with F1 score: {cv_scores[best_k]:.4f}")
-    return best_k, cv_scores
 
 
 if __name__ == "__main__":
-    train_data, train_label, test_data, test_label = data_loader(which=3)
+    train_data, train_label, test_data, test_label = data_loader(which=args.which)
+    print(f"========== Data Loaded for unit {args.which} ==========")
     train_data = train_data.T
     test_data = test_data.T
 
-    # Fit PCA on training data (samples as rows, features as columns)
-    # pca = PCA(n_components=9)
-    # pca.fit(train_data)  # train_data shape: (n_samples, n_features)
-
-    # reducer = umap.UMAP(n_components=12, random_state=0)
-    # train_data_pca = reducer.fit_transform(train_data)
-    # test_data_pca = reducer.transform(test_data)
-
-    # Transform both train and test data using the same PCA object
-    # train_data_pca = pca.transform(train_data)  # shape: (n_samples, 9)
-    # test_data_pca = pca.transform(test_data)  # shape: (n_samples, 9)
-
-    # find_optimal_k(train_data, train_label, k_range=range(1, 101, 2))
-
-    knn = KNeighborsClassifier(n_neighbors=95)
-
-    # Step 5: 訓練模型
-    knn.fit(train_data, train_label)
-
-    # Step 6: 預測
-    y_pred = knn.predict(test_data)
-
-    # Step 7: 評估模型表現
-    accuracy, precision, recall, f1_score = calculate_evaluation_metrics(test_label, y_pred)
-
-    print(f"Accuracy: {accuracy:.4f}")
-    print(f"Precision: {precision:.4f}")
-    print(f"Recall: {recall:.4f}")
-    print(f"F1-score: {f1_score:.4f}")
+    if args.optimize:
+        print("Optimizing the number of neighbors (k) for KNN...")
+        find_optimal_k(train_data, train_label)
+    else:
+        print(f"Using KNN with {N_NEIGHBORS[args.which - 1]} neighbors...")
+        knn = KNeighborsClassifier(n_neighbors=N_NEIGHBORS[args.which - 1])
+        knn.fit(train_data, train_label)
+        y_pred = knn.predict(test_data)
+        accuracy, precision, recall, f1_score = calculate_evaluation_metrics(test_label, y_pred)
+        print(f"Accuracy: {accuracy:.4f}, Precision: {precision:.4f}, Recall: {recall:.4f}, F1 Score: {f1_score:.4f}")

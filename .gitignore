@@ -181,4 +181,4 @@ cython_debug/
 .cursorindexingignore
 
 OLD*
-fig/
+*.png
