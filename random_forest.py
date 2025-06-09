@@ -7,6 +7,7 @@ import warnings
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 warnings.filterwarnings("ignore")
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pickle
 import sklearn
@@ -54,7 +55,7 @@ def main():
             print('=====' * 20)
 
         print('Training...')
-        model = sklearn.ensemble.RandomForestClassifier(n_estimators = 100, criterion = 'entropy')
+        model = sklearn.ensemble.RandomForestClassifier(random_state = 42)
         model.fit(train_data.T, train_label)
 
         with open(model_path, 'wb') as file:
@@ -87,6 +88,32 @@ def main():
     recall = confusion_matrix[0, 0] / np.sum(confusion_matrix[:, 0])
     f1_score = 2 * precision * recall / (precision + recall)
     print(f'F1 score: {f1_score}\nAccuracy: {accuracy}')
+
+    # Visualize confusion matrix
+    plt.figure(figsize=(8, 6))
+    plt.imshow(confusion_matrix, interpolation="nearest", cmap=plt.cm.Blues)
+    plt.title("Confusion Matrix")
+    plt.colorbar()
+    tick_marks = [0, 1]
+    plt.xticks(tick_marks, ["Positive", "Negative"])
+    plt.yticks(tick_marks, ["Positive", "Negative"])
+    plt.xlabel("Predicted Label")
+    plt.ylabel("True Label")
+
+    # Add text annotations in the cells
+    thresh = (confusion_matrix[0, 0] + confusion_matrix[1, 1]) / 2
+    for i in range(2):
+        for j in range(2):
+            plt.text(
+                j,
+                i,
+                confusion_matrix[i][j],
+                horizontalalignment="center",
+                color="white" if confusion_matrix[i][j] > thresh else "black",
+            )
+
+    plt.tight_layout()
+    plt.show()
 
 if __name__ == '__main__':
     main()
