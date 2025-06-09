@@ -14,11 +14,11 @@ from CNN_dataloader import data_loader
 parser = argparse.ArgumentParser()
 parser.add_argument('--new', action = 'store_true', help = 'Create a new model')
 parser.add_argument('--name', type = str, default = 'cnn', help = 'The name of model')
-parser.add_argument('--period', type = int, default = 16, help = 'The time period of the train and test data')
+parser.add_argument('--period', type = int, default = 24, help = 'The time period of the train and test data')
 parser.add_argument('--interval', type = int, default = 1, help = 'The interval of the train and test data')
 parser.add_argument('--which', type = int, default = 1, help = 'Choose the unit of kbar, 1 means 1hr, 3 means 15mins. 2 and 4 means find the difference between each two kbar')
 parser.add_argument('--batch-size', type = int, default = 32, help = 'The batch size of the train data')
-parser.add_argument('--epochs', type = int, default = 20, help = 'The number of epochs to train the model')
+parser.add_argument('--epochs', type = int, default = 50, help = 'The number of epochs to train the model')
 parser.add_argument('--lr', type = float, default = 0.001, help = 'The learning rate of the model')
 args = parser.parse_args()
 
@@ -31,13 +31,15 @@ time_period = {
     6: '4hr_diff'
 }
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
+seed = 42
+torch.manual_seed(seed)
+np.random.seed(seed)
 
 class CNN(torch.nn.Module):
     def __init__(self, input_len, output_dim):
         super().__init__()
-        self.conv1 = torch.nn.Conv1d(in_channels = 5, out_channels = 64, kernel_size = 5, padding = 2)
-        self.conv2 = torch.nn.Conv1d(in_channels = 64, out_channels = 128, kernel_size = 5, padding = 2)
+        self.conv1 = torch.nn.Conv1d(in_channels = 5, out_channels = 64, kernel_size = 5, padding = 1)
+        self.conv2 = torch.nn.Conv1d(in_channels = 64, out_channels = 128, kernel_size = 5, padding = 1)
         self.pool = torch.nn.MaxPool1d(kernel_size = 2)
         self.relu = torch.nn.ReLU()
 
@@ -65,22 +67,26 @@ class CNN(torch.nn.Module):
 def train(model, train_data, train_label, val_data, val_label, criterion, optimizer):
     train_losses = []
     val_losses = []
+    lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max = args.epochs, eta_min = 1e-6)
 
     for epoch in range(args.epochs):
         start_pos = 0
         model.train()
 
         train_loss = 0
-        for _ in tqdm(range(0, len(train_data) // args.batch_size + 1), desc = f'Epoch {epoch}:'):
+        generator = range(0, len(train_data) // args.batch_size + 1) if len(train_data) % args.batch_size != 0 else range(0, len(train_data) // args.batch_size)
+        for _ in tqdm(generator, desc = f'Epoch {epoch}:'):
             end_pos = start_pos + args.batch_size if start_pos + args.batch_size < len(train_data) else len(train_data)
             batch_data = train_data[start_pos : end_pos]
-            batch_label = train_label[start_pos : end_pos]
+            batch_label = train_label[start_pos : end_pos] if len(train_label[start_pos : end_pos]) > 1 else train_label[start_pos : end_pos].unsqueeze(0)
 
             optimizer.zero_grad()
             output = model(batch_data)
             loss = criterion(output, batch_label)
             loss.backward()
             optimizer.step()
+            lr_scheduler.step()
+            
 
             train_loss += loss.item() * (end_pos - start_pos)
             start_pos = end_pos
@@ -137,7 +143,7 @@ def test(model, test_data, test_label, criterion):
     val_loss /= len(test_data)
     accuracy = correct / len(test_data)
     print(f'Test Loss: {val_loss:.4f}, Accuracy: {accuracy:.4f}')
-    calculate_evaluation_metrics(test_label.cpu().numpy(), pred.cpu().numpy())
+    calculate_evaluation_metrics(test_label.cpu().numpy(), np.array(prediction))
 
 def calculate_evaluation_metrics(y_true, y_pred):
     """
@@ -150,8 +156,12 @@ def calculate_evaluation_metrics(y_true, y_pred):
     precision = tp / (tp + fp) if (tp + fp) > 0 else 0
     recall = tp / (tp + fn) if (tp + fn) > 0 else 0
     f1_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
+    print(f"Precision: {precision:.4f}, Recall: {recall:.4f}, F1-score: {f1_score:.4f}")
+    # Calculate accuracy
+    accuracy = (tp + tn) / (tp + tn + fp + fn)
+    print(f"Accuracy: {accuracy:.4f}")
 
-    cm_display = np.array([[tp, fp], [fn, tn]])
+    cm_display = np.array([[tp, fn], [fp, tn]])
     print(f"Confusion Matrix:\n{cm_display}")
     # Visualize confusion matrix
     plt.figure(figsize=(8, 6))
@@ -161,8 +171,8 @@ def calculate_evaluation_metrics(y_true, y_pred):
     tick_marks = [0, 1]
     plt.xticks(tick_marks, ["Positive", "Negative"])
     plt.yticks(tick_marks, ["Positive", "Negative"])
-    plt.xlabel("Predicted Label")
-    plt.ylabel("True Label")
+    plt.xlabel("True Label")
+    plt.ylabel("Predicted Label")
 
     # Add text annotations in the cells
     thresh = (tp + tn) / 2
@@ -177,9 +187,8 @@ def calculate_evaluation_metrics(y_true, y_pred):
             )
 
     plt.tight_layout()
+    plt.savefig(f'which{args.which}_confusion_matrix.png')
     plt.show()
-
-    return precision, recall, f1_score
 
 def main():
     train_data, train_label, test_data, test_label = data_loader(
@@ -209,6 +218,13 @@ def main():
         print(f'Validation data shape: {val_data.shape}, Validation label shape: {val_label.shape}')
         print('=====' * 20)
 
+        print('----- Shuffling data... -----')
+        shuffle_indices = np.random.permutation(len(train_data))
+        train_data = train_data[shuffle_indices]
+        train_label = train_label[shuffle_indices]
+        print(f'Train data shape after shuffle: {train_data.shape}, Train label shape after shuffle: {train_label.shape}')
+        print('=====' * 20)
+
         train_data_tensor = torch.tensor(train_data, dtype = torch.float32).to(device)
         train_label_tensor = torch.tensor(train_label, dtype = torch.long).to(device)
         val_data_tensor = torch.tensor(val_data, dtype = torch.float32).to(device)
@@ -222,7 +238,9 @@ def main():
         torch.save(model, model_path)
     else:
         model = torch.load(model_path, weights_only = False).to(device)
+        print('=====' * 20)
         print(f'Loading model from {model_path}')
+        print('=====' * 20)
 
     test_data_tensor = torch.tensor(test_data, dtype = torch.float32).to(device)
     test_label_tensor = torch.tensor(test_label, dtype = torch.long).to(device)
